@@ -46,7 +46,7 @@ def window_func(var_1: np.ndarray, var_2: np.ndarray, window: int, func: Callabl
 
 def ts2xy(data_frame: pd.DataFrame, x_axis: str) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Decompose a data frame variable to x ans ys
+    Decompose a data frame variable to x and ys
 
     :param data_frame: the input data
     :param x_axis: the axis for the x and y output
@@ -85,7 +85,7 @@ def plot_curves(
     max_x = max(xy[0][-1] for xy in xy_list)
     min_x = 0
     for _, (x, y) in enumerate(xy_list):
-        plt.scatter(x, y, s=2)
+        #plt.scatter(x, y, s=2) We can't scater and then plot a line afterwards.
         # Do not plot the smoothed curve at all if the timeseries is shorter than window size.
         if x.shape[0] >= EPISODES_WINDOW:
             # Compute and plot rolling mean with window of size EPISODE_WINDOW
@@ -95,6 +95,51 @@ def plot_curves(
     plt.title(title)
     plt.xlabel(x_axis)
     plt.ylabel("Episode Rewards")
+    plt.tight_layout()
+
+
+def plot_aggregated_curves(
+    xy_list: List[Tuple[np.ndarray, np.ndarray]], x_axis: str, title: str, figsize: Tuple[int, int] = (8, 2)
+) -> None:
+    """
+    plot the aggregated learning curves curves
+
+    :param xy_list: the x and y coordinates to plot
+    :param x_axis: the axis for the x and y output
+        (can be X_TIMESTEPS='timesteps', X_EPISODES='episodes' or X_WALLTIME='walltime_hrs')
+    :param title: the title of the plot
+    :param figsize: Size of the figure (width, height)
+    """
+
+    plt.figure(title, figsize=figsize)
+    max_x = max(xy[0][-1] for xy in xy_list)
+    min_x = 0
+    
+    min_y = min(len(xy[1]) for xy in xy_list)
+    # Truncate data with min_y, we should only loose very little data
+    y_arrays = [i[1][:min_y] for i in xy_list]
+    x_arrays = [i[0][:min_y] for i in xy_list]
+
+    mean_curve = np.mean(y_arrays, axis=0)
+    std_curve = np.std(y_arrays, axis=0)
+    
+    x_vals = x_arrays[0]
+    x, mean_curve = window_func(x_vals, mean_curve, EPISODES_WINDOW, np.mean)
+    x, std_curve = window_func(x_vals, std_curve, EPISODES_WINDOW, np.mean)
+
+    x = np.array(x, dtype=float)
+    
+    # Plot aggregated learning curve with error bars
+    plt.plot(x, mean_curve, label='Mean Curve')
+    plt.fill_between(x,
+                     mean_curve - std_curve,
+                     mean_curve + std_curve,
+                     alpha=0.5, color='lightblue')
+    plt.xlim(min_x, max_x)
+    plt.title(title)
+    plt.xlabel(x_axis)
+    plt.ylabel("Episode Rewards")
+    plt.legend()
     plt.tight_layout()
 
 
@@ -111,7 +156,6 @@ def plot_results(
     :param task_name: the title of the task to plot
     :param figsize: Size of the figure (width, height)
     """
-
     data_frames = []
     for folder in dirs:
         data_frame = load_results(folder)
@@ -119,4 +163,7 @@ def plot_results(
             data_frame = data_frame[data_frame.l.cumsum() <= num_timesteps]
         data_frames.append(data_frame)
     xy_list = [ts2xy(data_frame, x_axis) for data_frame in data_frames]
-    plot_curves(xy_list, x_axis, task_name, figsize)
+    if aggregate:
+        plot_aggregated_curves(xy_list, x_axis, task_name, figsize)
+    else:
+        plot_curves(xy_list, x_axis, task_name, figsize)
