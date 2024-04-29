@@ -2,7 +2,7 @@ import numpy as np
 import torch as th
 from torch.nn import functional as F
 
-from stable_baselines3 import DQN
+from stable_baselines3.dqn import DQN
 
 
 class DoubleDQN(DQN):
