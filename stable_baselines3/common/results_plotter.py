@@ -144,7 +144,9 @@ def plot_aggregated_curves(
 
 
 def plot_results(
-    dirs: List[str], num_timesteps: Optional[int], x_axis: str, task_name: str, figsize: Tuple[int, int] = (8, 2)
+    dirs: List[str], num_timesteps: Optional[int], 
+    x_axis: str, task_name: str, figsize: Tuple[int, int] = (8, 2),
+    aggregate: bool = False
 ) -> None:
     """
     Plot the results using csv files from ``Monitor`` wrapper.
